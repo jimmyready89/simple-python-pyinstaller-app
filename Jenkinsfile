@@ -48,7 +48,7 @@ node {
                     sh 'apk add sudo'
                     sh 'apk add binutils'
                     sh 'sudo pip install -U pyinstaller'
-                    sh 'sudo pyinstaller --onefile sources/add2vals.py'
+                    sh 'sudo pyinstaller --onefile --windowed sources/add2vals.py'
                 }
                 archiveArtifacts 'dist/add2vals'
             }
