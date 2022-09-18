@@ -44,7 +44,8 @@ node {
     stage('Deploy') { 
         if (TestSuccess == true) {
             catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                docker.image('cdrx/pyinstaller-linux:python3').inside('-v "$(pwd):/src/"') {
+                docker.image('python:3.7.14-alpine3.16').inside('-p 3000:3000') {
+                    sh 'pip install -U pyinstaller'
                     sh 'pyinstaller --onefile sources/add2vals.py'
                 }
                 archiveArtifacts 'dist/add2vals'
