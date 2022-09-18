@@ -44,11 +44,10 @@ node {
     stage('Deploy') { 
         if (TestSuccess == true) {
             catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                docker.image('python:3.7.14-alpine3.16').inside('-p 3000:3000 -it --user=root') {
-                    sh 'apk add sudo'
-                    sh 'apk add binutils'
+                docker.image('python:3.9.14-buster').inside('-p 3000:3000 -it --user=root') {
+                    sh 'sudo apt install binutils'
                     sh 'sudo pip install -U pyinstaller'
-                    sh 'sudo pyinstaller --onefile --windowed sources/add2vals.py'
+                    sh 'sudo pyinstaller sources/add2vals.py'
                 }
                 archiveArtifacts 'dist/add2vals'
             }
