@@ -45,6 +45,7 @@ node {
         if (TestSuccess == true) {
             catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                 docker.image('python:3.7.14-alpine3.16').inside('-p 3000:3000') {
+                    sh 'apk add sudo'
                     sh 'sudo pip install -U pyinstaller'
                     sh 'sudo pyinstaller --onefile sources/add2vals.py'
                 }
