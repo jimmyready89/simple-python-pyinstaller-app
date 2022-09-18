@@ -46,8 +46,8 @@ node {
             catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                 docker.image('cdrx/pyinstaller-linux:python3').inside {
                     sh 'pyinstaller --onefile sources/add2vals.py'
-                    archiveArtifacts 'dist/add2vals'
                 }
+                archiveArtifacts 'dist/add2vals'
             }
             // input message: 'Sudah selesai menggunakan React App? (Klik "Proceed" untuk mengakhiri)' 
             // catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
