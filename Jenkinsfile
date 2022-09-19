@@ -2,8 +2,9 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 node {
     boolean PullSuccess = false
-    boolean BuiltSuccess = true
-    boolean TestSuccess = true
+    boolean BuiltSuccess = false
+    boolean TestSuccess = false
+    boolean ReleaseSuccess = false
 
     stage('cek tipe os') {
         if (isUnix() == false) {
@@ -16,50 +17,78 @@ node {
             PullSuccess = true
         }
     }
-    // stage('Built') {
-    //     if (PullSuccess == true) {
-    //         docker.image('python:3.7.14-alpine3.16').inside('-p 3000:3000') {
-    //             catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-    //                 sh 'python -m py_compile sources/add2vals.py sources/calc.py'
-    //                 BuiltSuccess = true
-    //             }
-    //         }
-    //     }else{
-    //         Utils.markStageSkippedForConditional(STAGE_NAME)
-    //     }
-    // }
-    // stage('Test') {
-    //     if( BuiltSuccess == true ){
-    //         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-    //             docker.image('sureshkvl/pytester:latest').inside('-p 3000:3000') {
-    //                 sh 'py.test --verbose --junit-xml test-reports/results.xml sources/test_calc.py'
-    //                 junit 'test-reports/results.xml'
-    //                 TestSuccess = true
-    //             }
-    //         }
-    //     }else{
-    //         Utils.markStageSkippedForConditional(STAGE_NAME)
-    //     }
-    // }
-    stage('Deploy') { 
-        if (TestSuccess == true) {
-            catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                docker.image('python:3.9.14-buster').inside('-p 3000:3000 -it --user=root') {
-                    sh 'apt install binutils'
-                    sh 'apt install -U pyinstaller'
-                    sh 'python pyinstaller --onefile sources/add2vals.py'
+    stage('Build') {
+        if (PullSuccess == true) {
+            docker.image('python:3.7.14-alpine3.16').inside('-p 3000:3000') {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    sh 'python -m py_compile sources/add2vals.py sources/calc.py'
+                    BuiltSuccess = true
                 }
-                archiveArtifacts 'dist/add2vals'
             }
-            // input message: 'Sudah selesai menggunakan React App? (Klik "Proceed" untuk mengakhiri)' 
-            // catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-            //     withDockerContainer(args: '-p 3000:3000', image: 'sureshkvl/pytester') {
-            //         sh 'py.test --verbose --junit-xml test-reports/results.xml sources/test_calc.py'
-            //         // junit 'test-reports/results.xml'
-            //     }
-            // }
         }else{
             Utils.markStageSkippedForConditional(STAGE_NAME)
+        }
+    }
+    stage('Test') {
+        if( BuiltSuccess == true ){
+            catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                docker.image('sureshkvl/pytester:latest').inside('-p 3000:3000') {
+                    sh 'py.test --verbose --junit-xml test-reports/results.xml sources/test_calc.py'
+                    junit 'test-reports/results.xml'
+                    TestSuccess = true
+                }
+            }
+        }else{
+            Utils.markStageSkippedForConditional(STAGE_NAME)
+        }
+    }
+    stage('Release') { 
+        if (TestSuccess == true) {
+            catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                docker.image('python:3.7.14-alpine3.16').inside('-p 3000:3000 -it --user=root') {
+                    sh 'apk add binutils'
+                    sh 'pip install pyinstaller'
+                    sh 'pyinstaller --onefile sources/add2vals.py'
+                }
+                archiveArtifacts 'dist/add2vals'
+
+                ReleaseSuccess = true
+            }
+        }else{
+            Utils.markStageSkippedForConditional(STAGE_NAME)
+        }
+    }
+    withEnv([
+        "HEROKU_API_KEY=${credentials('heroku-api-key')}",
+        "IMAGE_NAME='jimmy/submision'",
+        "IMAGE_TAG='latest'",
+        "APP_NAME='base-file'"
+    ]) {
+        stage('Deploy') { 
+            if (TestSuccess == true) {
+                input message: 'Yakin Melakukan Deployment ?' 
+
+                sleep time: 1, unit: 'MINUTES'
+
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    sh 'echo $HEROKU_API_KEY | docker login --username=_ --password-stdin registry.heroku.com'
+
+                    sh '''
+                        docker build -t $IMAGE_NAME:$IMAGE_TAG .
+                        docker tag $IMAGE_NAME:$IMAGE_TAG registry.heroku.com/$APP_NAME/worker
+                        docker push registry.heroku.com/$APP_NAME/worker
+                    '''
+
+                    docker.image('buster-slim').inside('-p 3000:3000 -it --user=root') {
+                        sh 'curl https://cli-assets.heroku.com/install-ubuntu.sh | sh'
+                        sh "HEROKU_API_KEY='${HEROKU_API_KEY}' heroku container:release image-worker --app=${APP_NAME}"
+                    }
+                }
+
+                sh 'docker logout'
+            }else{
+                Utils.markStageSkippedForConditional(STAGE_NAME)
+            }
         }
     }
     stage('Post Action Clean UP WS') {
