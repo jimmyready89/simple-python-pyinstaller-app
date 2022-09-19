@@ -61,7 +61,7 @@ node {
     withCredentials([string(credentialsId: 'heroku-api-key', variable: 'HEROKU_API_KEY')]) {
         withEnv(['IMAGE_NAME=jimmy/submision', 'IMAGE_TAG=latest', 'APP_NAME=base-file']) {
             stage('Deploy') { 
-                if (TestSuccess == true) {
+                if (ReleaseSuccess == true) {
                     input message: 'Yakin Melakukan Deployment ?' 
 
                     sleep time: 1, unit: 'MINUTES'
