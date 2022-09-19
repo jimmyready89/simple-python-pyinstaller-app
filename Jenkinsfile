@@ -58,36 +58,33 @@ node {
             Utils.markStageSkippedForConditional(STAGE_NAME)
         }
     }
-    withEnv([
-        "HEROKU_API_KEY=${credentials('heroku-api-key')}",
-        "IMAGE_NAME='jimmy/submision'",
-        "IMAGE_TAG='latest'",
-        "APP_NAME='base-file'"
-    ]) {
-        stage('Deploy') { 
-            if (TestSuccess == true) {
-                input message: 'Yakin Melakukan Deployment ?' 
+    withCredentials([string(credentialsId: 'heroku-api-key', variable: 'HEROKU_API_KEY')]) {
+        withEnv(['IMAGE_NAME=jimmy/submision', 'IMAGE_TAG=latest', 'APP_NAME=base-file']) {
+            stage('Deploy') { 
+                if (TestSuccess == true) {
+                    input message: 'Yakin Melakukan Deployment ?' 
 
-                sleep time: 1, unit: 'MINUTES'
+                    sleep time: 1, unit: 'MINUTES'
 
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    sh 'echo $HEROKU_API_KEY | docker login --username=_ --password-stdin registry.heroku.com'
+                    catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                        sh 'echo $HEROKU_API_KEY | docker login --username=_ --password-stdin registry.heroku.com'
 
-                    sh '''
-                        docker build -t $IMAGE_NAME:$IMAGE_TAG .
-                        docker tag $IMAGE_NAME:$IMAGE_TAG registry.heroku.com/$APP_NAME/worker
-                        docker push registry.heroku.com/$APP_NAME/worker
-                    '''
+                        sh '''
+                            docker build -t $IMAGE_NAME:$IMAGE_TAG .
+                            docker tag $IMAGE_NAME:$IMAGE_TAG registry.heroku.com/$APP_NAME/worker
+                            docker push registry.heroku.com/$APP_NAME/worker
+                        '''
 
-                    docker.image('buster-slim').inside('-p 3000:3000 -it --user=root') {
-                        sh 'curl https://cli-assets.heroku.com/install-ubuntu.sh | sh'
-                        sh "HEROKU_API_KEY='${HEROKU_API_KEY}' heroku container:release image-worker --app=${APP_NAME}"
+                        docker.image('buster-slim').inside('-p 3000:3000 -it --user=root') {
+                            sh 'curl https://cli-assets.heroku.com/install-ubuntu.sh | sh'
+                            sh "HEROKU_API_KEY='${HEROKU_API_KEY}' heroku container:release image-worker --app=${APP_NAME}"
+                        }
                     }
-                }
 
-                sh 'docker logout'
-            }else{
-                Utils.markStageSkippedForConditional(STAGE_NAME)
+                    sh 'docker logout'
+                }else{
+                    Utils.markStageSkippedForConditional(STAGE_NAME)
+                }
             }
         }
     }
