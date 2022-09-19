@@ -62,9 +62,9 @@ node {
         withEnv(['IMAGE_NAME=jimmy/submision', 'IMAGE_TAG=latest', 'APP_NAME=base-file']) {
             stage('Deploy') { 
                 if (ReleaseSuccess == true) {
-                    input message: 'Yakin Melakukan Deployment ?' 
+                    // input message: 'Yakin Melakukan Deployment ?' 
 
-                    sleep time: 1, unit: 'MINUTES'
+                    // sleep time: 1, unit: 'MINUTES'
 
                     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                         sh 'echo $HEROKU_API_KEY | docker login --username=_ --password-stdin registry.heroku.com'
@@ -75,7 +75,7 @@ node {
                             docker push registry.heroku.com/$APP_NAME/worker
                         '''
 
-                        docker.image('buster-slim').inside('-p 3000:3000 -it --user=root') {
+                        docker.image('debian:buster-slim').inside('-p 3000:3000 -it --user=root') {
                             sh 'curl https://cli-assets.heroku.com/install-ubuntu.sh | sh'
                             sh "HEROKU_API_KEY='${HEROKU_API_KEY}' heroku container:release image-worker --app=${APP_NAME}"
                         }
