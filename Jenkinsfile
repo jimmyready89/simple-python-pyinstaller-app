@@ -42,7 +42,7 @@ node {
             Utils.markStageSkippedForConditional(STAGE_NAME)
         }
     }
-    stage('Release') { 
+    stage('AppCreate') { 
         if (TestSuccess == true) {
             catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                 docker.image('python:3.7.14-alpine3.16').inside('-p 3000:3000 -it --user=root') {
