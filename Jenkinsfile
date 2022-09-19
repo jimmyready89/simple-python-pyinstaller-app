@@ -76,7 +76,7 @@ node {
                         '''
 
                         docker.image('debian:buster-slim').inside('-p 3000:3000 -it --user=root') {
-                            sh 'sudo apt install curl'
+                            sh 'apt install curl'
                             sh 'curl https://cli-assets.heroku.com/install-ubuntu.sh | sh'
                             sh "HEROKU_API_KEY='${HEROKU_API_KEY}' heroku container:release image-${BUILD_NUMBER} --app=${APP_NAME}"
                         }
