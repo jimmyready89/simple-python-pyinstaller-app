@@ -5,6 +5,7 @@ node {
     boolean BuiltSuccess = false
     boolean TestSuccess = false
     boolean ReleaseSuccess = false
+    boolean DeployApprove = false
 
     stage('cek tipe os') {
         if (isUnix() == false) {
@@ -58,14 +59,20 @@ node {
             Utils.markStageSkippedForConditional(STAGE_NAME)
         }
     }
-    withCredentials([string(credentialsId: 'heroku-api-key', variable: 'HEROKU_API_KEY')]) {
-        withEnv(['IMAGE_NAME=jimmy/submision', 'IMAGE_TAG=latest', 'APP_NAME=base-file']) {
-            stage('Deploy') { 
-                if (ReleaseSuccess == true) {
-                    // input message: 'Yakin Melakukan Deployment ?' 
-
-                    // sleep time: 1, unit: 'MINUTES'
-
+    stage('Manual Approval') { 
+        if (ReleaseSuccess == true) {
+            catchError(buildResult: 'ABORT', stageResult: 'ABORT') {
+               input message: 'Lanjutkan ke tahap Deploy?' 
+               DeployApprove = true
+            }
+        }else {
+            Utils.markStageSkippedForConditional(STAGE_NAME)
+        }
+    }
+    stage('Deploy') { 
+        if (DeployApprove == true ) {
+            withCredentials([string(credentialsId: 'heroku-api-key', variable: 'HEROKU_API_KEY')]) {
+                withEnv(['IMAGE_NAME=jimmy/submision', 'IMAGE_TAG=latest', 'APP_NAME=base-file']) {
                     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                         sh 'echo $HEROKU_API_KEY | docker login --username=_ --password-stdin registry.heroku.com'
 
@@ -83,11 +90,13 @@ node {
                         }
                     }
 
+                    sleep time: 1, unit: 'MINUTES'
+
                     sh 'docker logout'
-                }else{
-                    Utils.markStageSkippedForConditional(STAGE_NAME)
                 }
             }
+        }else{
+            Utils.markStageSkippedForConditional(STAGE_NAME)
         }
     }
     stage('Post Action Clean UP WS') {
