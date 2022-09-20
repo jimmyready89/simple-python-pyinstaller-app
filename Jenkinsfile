@@ -7,28 +7,20 @@ node {
     boolean ReleaseSuccess = false
     boolean DeployApprove = false
 
-    stage('cek tipe os') {
-        if (isUnix() == false) {
-            error "node harus berjalan di os unix"
-        }
-    }
-    stage('Pull scripts dari repository github') {
-        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-            git branch: 'master', url: 'https://github.com/jimmyready89/simple-python-pyinstaller-app.git'
-            PullSuccess = true
-        }
-    }
     stage('Build') {
-        if (PullSuccess == true) {
+        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+            if (isUnix() == false) {
+                error "node harus berjalan di os unix"
+            }
+
             docker.image('python:3.7.14-alpine3.16').inside('-p 3000:3000') {
+                git branch: 'master', url: 'https://github.com/jimmyready89/simple-python-pyinstaller-app.git'
+
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     sh 'python -m py_compile sources/add2vals.py sources/calc.py'
                     BuiltSuccess = true
                 }
             }
-        }else{
-            Utils.markStageSkippedForConditional(STAGE_NAME)
-        }
     }
     stage('Test') {
         if( BuiltSuccess == true ){
@@ -43,24 +35,8 @@ node {
             Utils.markStageSkippedForConditional(STAGE_NAME)
         }
     }
-    stage('AppCreate') { 
-        if (TestSuccess == true) {
-            catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                docker.image('python:3.7.14-alpine3.16').inside('-p 3000:3000 -it --user=root') {
-                    sh 'apk add binutils'
-                    sh 'pip install pyinstaller'
-                    sh 'pyinstaller --onefile sources/add2vals.py'
-                }
-                archiveArtifacts 'dist/add2vals'
-
-                ReleaseSuccess = true
-            }
-        }else{
-            Utils.markStageSkippedForConditional(STAGE_NAME)
-        }
-    }
     stage('Manual Approval') { 
-        if (ReleaseSuccess == true) {
+        if (TestSuccess == true) {
             catchError(buildResult: 'ABORTED', stageResult: 'ABORTED') {
                input message: 'Lanjutkan ke tahap Deploy?' 
                DeployApprove = true
@@ -74,6 +50,14 @@ node {
             withCredentials([string(credentialsId: 'heroku-api-key', variable: 'HEROKU_API_KEY')]) {
                 withEnv(['IMAGE_NAME=jimmy/submision', 'IMAGE_TAG=latest', 'APP_NAME=base-file']) {
                     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                        docker.image('python:3.7.14-alpine3.16').inside('-p 3000:3000 -it --user=root') {
+                            sh 'apk add binutils'
+                            sh 'pip install pyinstaller'
+                            sh 'pyinstaller --onefile sources/add2vals.py'
+                        }
+
+                        archiveArtifacts 'dist/add2vals'
+
                         sh 'echo $HEROKU_API_KEY | docker login --username=_ --password-stdin registry.heroku.com'
 
                         sh '''
