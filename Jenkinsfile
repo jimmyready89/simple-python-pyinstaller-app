@@ -21,6 +21,7 @@ node {
                     BuiltSuccess = true
                 }
             }
+        }
     }
     stage('Test') {
         if( BuiltSuccess == true ){
