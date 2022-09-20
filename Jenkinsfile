@@ -71,8 +71,8 @@ node {
 
                         sh '''
                             docker build -t $IMAGE_NAME:$IMAGE_TAG .
-                            docker tag $IMAGE_NAME:$IMAGE_TAG registry.heroku.com/$APP_NAME/$BUILD_NUMBER
-                            docker push registry.heroku.com/$APP_NAME/$BUILD_NUMBER
+                            docker tag $IMAGE_NAME:$IMAGE_TAG registry.heroku.com/$APP_NAME/image-$BUILD_NUMBER
+                            docker push registry.heroku.com/$APP_NAME/image-$BUILD_NUMBER
                         '''
 
                         docker.image('debian:buster-slim').inside('-p 3000:3000 -it --user=root') {
