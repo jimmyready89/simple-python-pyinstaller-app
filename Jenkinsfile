@@ -61,7 +61,7 @@ node {
     }
     stage('Manual Approval') { 
         if (ReleaseSuccess == true) {
-            catchError(buildResult: 'ABORT', stageResult: 'ABORT') {
+            catchError(buildResult: 'ABORTED', stageResult: 'ABORTED') {
                input message: 'Lanjutkan ke tahap Deploy?' 
                DeployApprove = true
             }
